@@ -1,0 +1,9 @@
+dotenv
+langchain_ollama
+langchain_core
+pymysql 
+langchain-groq
+langchain
+langchain_groq
+langchain_community
+langgraph
