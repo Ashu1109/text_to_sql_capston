@@ -23,7 +23,7 @@ from langchain_core.tools import tool
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
 from langchain_groq import ChatGroq
-from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -110,7 +110,7 @@ def get_correct_sql_query(input):
 
 
 # SQL execution tools
-execute_query = QuerySQLDataBaseTool(db=db)
+execute_query = QuerySQLDatabaseTool(db=db)
 sql_query = create_sql_query_chain(llm, db)
 
 # Final chain
@@ -160,7 +160,7 @@ agent_executor = create_react_agent(
 
 
 # API endpoints
-@app.post("/")
+@app.get("/")
 async def root():
     return {"message": "Text to SQL API is running"}
 
