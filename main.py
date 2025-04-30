@@ -38,14 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database connection
-# Get database URL from environment variables
-database_url = os.environ.get("DATABASE_URL")
-if not database_url:
-    raise ValueError("DATABASE_URL environment variable is not set")
-
-# Connect to the database
-db = SQLDatabase.from_uri(database_url)
+db = SQLDatabase.from_uri("mysql+pymysql://avnadmin:AVNS_fXEOEYr3BoFiYyRAlLN@mysql-25fb3831-aayushkumarhigh-a519.l.aivencloud.com:23558/defaultdb")
 
 # Initialize LLM
 llm = ChatGroq(
@@ -120,7 +113,8 @@ You have access to tools for interacting with the database.
 Only use the below tools. Only use the information returned by the below tools to construct your final answer.
 You MUST double check your query before executing it. If you get an error while executing a query, rewrite the query and try again.
 
-YOU MUST INCLUDE ALL Dosage IN DATABASE IN YOUR ANSWER.
+INCLUDE PRICE IN RUPEES.
+INCLUDE THE NAME OF THE EVENTS and Place
 
 DO NOT INCLUDE DATABASE CONNECTION INFORMATION IN YOUR QUERY. GIVE HUMAN READABLE ANSWERS.
 DO NOT GIVE INFORMATION ABOUT THE DATABASE LIKE TABLE NAME OR COLUMN NAME.
@@ -145,7 +139,7 @@ except:
 agent_executor = create_react_agent(llm, tools, state_modifier=system_message, debug=False)
 
 # API endpoints
-@app.get("/")
+@app.post("/")
 async def root():
     return {"message": "Text to SQL API is running"}
 
