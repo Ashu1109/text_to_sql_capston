@@ -7,15 +7,18 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Environment setup
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 warnings.filterwarnings("ignore")
 load_dotenv()
 
-# Imports
-from langchain_ollama import ChatOllama
+# Imports (removed unused ChatOllama import)
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, chain
-from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
 from langchain_core.tools import tool
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
@@ -27,7 +30,10 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.prebuilt import create_react_agent
 
 # Initialize FastAPI
-app = FastAPI(title="Text to SQL API", description="API for converting natural language to SQL queries")
+app = FastAPI(
+    title="Text to SQL API",
+    description="API for converting natural language to SQL queries",
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -38,26 +44,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-db = SQLDatabase.from_uri("mysql+pymysql://avnadmin:AVNS_fXEOEYr3BoFiYyRAlLN@mysql-25fb3831-aayushkumarhigh-a519.l.aivencloud.com:23558/defaultdb")
+# Database connection
+db = SQLDatabase.from_uri(
+    "mysql+pymysql://avnadmin:AVNS_fXEOEYr3BoFiYyRAlLN@mysql-25fb3831-aayushkumarhigh-a519.l.aivencloud.com:23558/defaultdb"
+)
 
 # Initialize LLM
 llm = ChatGroq(
     groq_api_key="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",
-    model_name="llama-3.3-70b-versatile"
+    model_name="llama-3.3-70b-versatile",
 )
+
 
 # Define request models
 class QueryRequest(BaseModel):
     question: str
 
+
 class AgentQueryRequest(BaseModel):
     question: str
+
 
 # Set up SQL chain
 sql_chain = create_sql_query_chain(llm, db)
 
 # QnA chain setup
-system = SystemMessagePromptTemplate.from_template("""You are helpful AI assistant who answer user question based on the provided context.""")
+system = SystemMessagePromptTemplate.from_template(
+    """You are helpful AI assistant who answer user question based on the provided context."""
+)
 prompt_template = """Answer user question based on the provided context ONLY! If you do not know the answer, just say "I don't know".
             ### Context:
             {context}
@@ -72,25 +86,28 @@ messages = [system, prompt]
 template = ChatPromptTemplate(messages)
 qna_chain = template | llm | StrOutputParser()
 
+
 # Helper function
 def ask_llm(context, question):
-    return qna_chain.invoke({'context': context, 'question': question})
+    return qna_chain.invoke({"context": context, "question": question})
+
 
 @chain
 def get_correct_sql_query(input):
-    context = input['context']
-    question = input['question']
+    context = input["context"]
+    question = input["question"]
 
-    instruction = """
+    instruction = f"""
         Use above context to fetch the correct SQL query for following question
-        {}
+        {question}
 
-        Do not enclose query in ```sql and do not write preamble and explanation.
+        Do not enclose query in ```
         You MUST return only single SQL query.
-    """.format(question)
+    """
 
     response = ask_llm(context=context, question=instruction)
     return response
+
 
 # SQL execution tools
 execute_query = QuerySQLDataBaseTool(db=db)
@@ -98,9 +115,10 @@ sql_query = create_sql_query_chain(llm, db)
 
 # Final chain
 final_chain = (
-    {'context': sql_query, 'question': RunnablePassthrough()}
+    {"context": sql_query, "question": RunnablePassthrough()}
     | get_correct_sql_query
-    | execute_query | StrOutputParser()
+    | execute_query
+    | StrOutputParser()
 )
 
 # Agent setup
@@ -133,15 +151,19 @@ tools = toolkit.get_tools()
 try:
     tool = TavilySearchResults(max_results=2)
     tools = tools + [tool]
-except:
+except Exception:
     pass
 
-agent_executor = create_react_agent(llm, tools, state_modifier=system_message, debug=False)
+agent_executor = create_react_agent(
+    llm, tools, state_modifier=system_message, debug=False
+)
+
 
 # API endpoints
 @app.post("/")
 async def root():
     return {"message": "Text to SQL API is running"}
+
 
 @app.post("/sql")
 async def generate_sql(request: QueryRequest) -> Dict:
@@ -151,14 +173,13 @@ async def generate_sql(request: QueryRequest) -> Dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/agent")
 async def agent_query(request: AgentQueryRequest) -> Dict:
     try:
-        result = agent_executor.invoke({"messages": [HumanMessage(content=request.question)]})
-        return {"result": result['messages'][-1].content}
+        result = agent_executor.invoke(
+            {"messages": [HumanMessage(content=request.question)]}
+        )
+        return {"result": result["messages"][-1].content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
